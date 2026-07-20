@@ -1,0 +1,73 @@
+version: '3.8'
+
+networks:
+  warehouse_network:
+    driver: bridge
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: warehouse_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: warehouse_db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    networks:
+      - warehouse_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: warehouse_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - warehouse_network
+
+  app:
+    build:
+      context: ./repo-client-backend
+      dockerfile: Dockerfile
+    container_name: warehouse_app
+    restart: unless-stopped
+    volumes:
+      - ./repo-client-backend/src:/var/www
+    networks:
+      - warehouse_network
+
+  webserver:
+    image: nginx:alpine
+    container_name: warehouse_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./repo-client-backend/src:/var/www
+      - ./repo-client-backend/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - warehouse_network
+
+  ai_service:
+    build:
+      context: ./repo-ai-microservice
+      dockerfile: Dockerfile
+    container_name: warehouse_ai_service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./repo-ai-microservice/app:/app/app
+      - vector_data:/app/chroma_db
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+    networks:
+      - warehouse_network
+
+volumes:
+  vector_data:
