@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         Role::firstOrCreate(['name' => 'admin']);
-        Role::firstOrCreate(['name' => 'bodeguero']);
+        Role::firstOrCreate(['name' => 'encargado']);
         Role::firstOrCreate(['name' => 'cliente']);
     }
 }
