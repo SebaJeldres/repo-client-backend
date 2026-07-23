@@ -39,4 +39,40 @@ class CategoryController extends Controller
         return redirect()->route('categories.index')->with('success', 'Categoria creada exitosamente');
 
     }
+
+    public function edit(Category $category)
+    {
+        $managers = User::role(['manager', 'admin'])->get();
+        return view('categories.edit', compact('category', 'managers'));
+
+    }
+
+    public function update(Request $request, Category $category)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:categories,name',
+            'description' => 'nullable|string',
+            'user_id' => 'nullable|exist:user_id',
+            'is_active' =>'boolean'
+        ]);
+
+        $category->update([
+            'name' => $request->name,
+            'slug' => Str::slug($request->name),
+            'description' => $request->description,
+            'user_id' => $request->user_id,
+            'is_active' => $request->has('is_active'),
+        ]);
+
+        return redirect()->route('categories.index')->with('succes', 'Categoria actualizada exitosamente');
+
+    }
+
+    public function destroy(Category $category)
+    {
+        $category->delete();
+        return redirect()->route('categories.index')->with('succes', 'Categoria eliminada exitosamente');
+    }
+
+
 }
