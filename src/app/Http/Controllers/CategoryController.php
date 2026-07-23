@@ -16,8 +16,8 @@ class CategoryController extends Controller
 
     public function create()
     {
-        $managers = User::role(['manager, admin'])->get();
-        return view('categories,create', compact('managers'));
+        $managers = User::role(['manager', 'admin'])->get();
+        return view('categories.create', compact('managers'));
 
     }
 
