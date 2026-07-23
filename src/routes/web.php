@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CategoryController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -23,14 +24,14 @@ Route::middleware('auth')->group(function () {
 // RUTAS PROTEGIDAS POR ROLES 
 // --------------------------------------------------------------------------
 
-// Rutas exclusivas para el Administrador
+// Rutas exclusivas para el admin
 Route::middleware(['auth', 'role:admin'])->group(function () {
     
 });
 
-// Rutas compartidas (por ejemplo: Admin o Cliente)
-Route::middleware(['auth', 'role:admin|cliente'])->group(function () {
-    
+// Rutas compartidas (por ejemplo: Admin o manager)
+Route::middleware(['auth', 'role:admin|manager'])->group(function () {
+    Route::resource('categories', CategoryController::class);
 });
 
 require __DIR__.'/auth.php';
