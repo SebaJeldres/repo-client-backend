@@ -44,16 +44,15 @@ class CategoryController extends Controller
     {
         $managers = User::role(['manager', 'admin'])->get();
         return view('categories.edit', compact('category', 'managers'));
-
     }
 
     public function update(Request $request, Category $category)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name',
+            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
             'description' => 'nullable|string',
-            'user_id' => 'nullable|exist:user_id',
-            'is_active' =>'boolean'
+            'user_id' => 'nullable|exists:users,id',
+            'is_active' => 'nullable|boolean'
         ]);
 
         $category->update([
@@ -64,8 +63,7 @@ class CategoryController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
-        return redirect()->route('categories.index')->with('succes', 'Categoria actualizada exitosamente');
-
+        return redirect()->route('categories.index')->with('success', 'Categoría actualizada exitosamente.');
     }
 
     public function destroy(Category $category)
