@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -12,7 +14,8 @@ class ProductController extends Controller
      */
     public function index()
     {
-        //
+        $products = Product::with('category')->latest()->paginate(10);
+        return view('products.index', compact ('products'));
     }
 
     /**
@@ -20,7 +23,8 @@ class ProductController extends Controller
      */
     public function create()
     {
-        //
+        $categories = Category::where('is_active', true)->get();
+        return view('prodcucts.create', compact('categories'));
     }
 
     /**
@@ -28,7 +32,34 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:50|unique:products,code',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'stock' => 'required|interger|min:0',
+            'minium_stock' => 'required|integer|min:0',
+            'category_id' => 'required|exist:categories,id',
+            'is_active' => 'nullable|boolean'
+
+        ]);
+
+        Product::create([
+            'name' => $request->name,
+            'slug' => Str::slug($request->name),
+            'code' => $request->code,
+            'description' => $request->description,
+            'price' => $request->price,
+            'cost_price' => $request->cost_price,
+            'stock' => $request->stock,
+            'minium_stock' => $request->minium_stock,
+            'category_id' => $request->category_id,
+            'is_active' => $request->has('is_active'),
+
+        ]);
+
+        return redirect()->route('products.index')->with('success', 'Producto creado exitosamente');
     }
 
     /**
