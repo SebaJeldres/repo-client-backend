@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
-use App\models\Category;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -15,7 +15,8 @@ class ProductController extends Controller
     public function index()
     {
         $products = Product::with('category')->latest()->paginate(10);
-        return view('products.index', compact ('products'));
+
+        return view('products.index', compact('products'));
     }
 
     /**
@@ -24,7 +25,7 @@ class ProductController extends Controller
     public function create()
     {
         $categories = Category::where('is_active', true)->get();
-        return view('prodcucts.create', compact('categories'));
+        return view('products.create', compact('categories'));
     }
 
     /**
@@ -38,9 +39,9 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
-            'stock' => 'required|interger|min:0',
-            'minium_stock' => 'required|integer|min:0',
-            'category_id' => 'required|exist:categories,id',
+            'stock' => 'required|integer|min:0',
+            'minimum_stock' => 'required|integer|min:0',
+            'category_id' => 'required|exists:categories,id',
             'is_active' => 'nullable|boolean'
 
         ]);
@@ -53,7 +54,7 @@ class ProductController extends Controller
             'price' => $request->price,
             'cost_price' => $request->cost_price,
             'stock' => $request->stock,
-            'minium_stock' => $request->minium_stock,
+            'minimum_stock' => $request->minimum_stock,
             'category_id' => $request->category_id,
             'is_active' => $request->has('is_active'),
 
