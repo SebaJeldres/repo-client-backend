@@ -26,6 +26,7 @@ class CategoryController extends Controller
         $request->validate([
             'name' => 'required|string|max:255|unique:categories,name',
             'description' => 'nullable|string',
+            'sector' => 'nullable|string|max:255',
             'user_id' => 'nullable|exists:users,id',
         ]);
 
@@ -33,6 +34,7 @@ class CategoryController extends Controller
             'name' => $request->name,
             'slug' => Str::slug($request->name),
             'description' => $request->description,
+            'sector' => $request->sector,
             'user_id' => $request->user_id,
         ]);
 
@@ -51,6 +53,7 @@ class CategoryController extends Controller
         $request->validate([
             'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
             'description' => 'nullable|string',
+            'sector' => 'nullable|string|max:255',
             'user_id' => 'nullable|exists:users,id',
             'is_active' => 'nullable|boolean'
         ]);
@@ -59,6 +62,7 @@ class CategoryController extends Controller
             'name' => $request->name,
             'slug' => Str::slug($request->name),
             'description' => $request->description,
+            'sector' => $request->sector,
             'user_id' => $request->user_id,
             'is_active' => $request->has('is_active'),
         ]);

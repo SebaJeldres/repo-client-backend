@@ -76,7 +76,8 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
-        //
+        $categories = Category::where('is_active', true)->get();
+        return view('products.edit', compact('product','categories'));
     }
 
     /**
@@ -84,7 +85,32 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-        //
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:50|unique:products,code,' . $product->id,
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'stock' => 'required|integer|min:0',
+            'minimum_stock' => 'required|integer|min:0',
+            'category_id' => 'required|exists:categories,id',
+            'is_active' => 'nullable|boolean'
+        ]);
+
+        $product->update([
+            'name' => $request->name,
+            'slug' => Str::slug($request->name),
+            'code' => $request->code,
+            'description' => $request->description,
+            'price' => $request->price,
+            'cost_price' => $request->cost_price,
+            'stock' => $request->stock,
+            'minimum_stock' => $request->minimum_stock,
+            'category_id' => $request->category_id,
+            'is_active' => $request->has('is_active'),
+        ]);
+
+        return redirect()->route('products.index')->with('success', 'Producto actualizado exitosamente');
     }
 
     /**
@@ -92,6 +118,8 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        //
+        $product->delete();
+
+        return redirect()->route('products.index')->with('success', 'Producto eliminado exitosamente');
     }
 }
