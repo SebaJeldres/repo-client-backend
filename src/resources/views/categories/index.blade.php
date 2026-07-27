@@ -26,6 +26,7 @@
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación / Sector<th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Encargado</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -34,11 +35,29 @@
                     <tbody class="bg-white divide-y divide-gray-200">
                         @forelse ($categories as $category)
                             <tr>
-                                <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{{ $category->name }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-500">{{ $category->description ?? 'Sin descripción' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                                    {{ $category->name }}
+                                </td>
+                                
+                                <td class="px-6 py-4 text-sm text-gray-500">
+                                    {{ $category->description ?? 'Sin descripción' }}
+                                </td>
+
+                                <!-- Columna de Sector / Ubicación -->
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                    @if($category->sector)
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                                             {{ $category->sector }}
+                                        </span>
+                                    @else
+                                        <span class="text-gray-400 italic">Sin sector</span>
+                                    @endif
+                                </td>
+
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {{ $category->manager ? $category->manager->name : 'Sin asignar' }}
                                 </td>
+
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if($category->is_active)
                                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Activo</span>
@@ -46,6 +65,7 @@
                                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inactivo</span>
                                     @endif
                                 </td>
+
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <a href="{{ route('categories.edit', $category) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</a>
                                     
@@ -60,7 +80,9 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-4 text-center text-gray-500">No hay categorías registradas.</td>
+                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                    No hay categorías registradas.
+                                </td>
                             </tr>
                         @endforelse
                     </tbody>
