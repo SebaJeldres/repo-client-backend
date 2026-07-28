@@ -47,6 +47,23 @@
                         @enderror
                     </div>
 
+                    <div class="mb-4">
+                        <label for="sector" class="block text-sm font-medium text-gray-700 mb-1">
+                            Sector / Ubicación en Bodega
+                        </label>
+                        <input 
+                            type="text" 
+                            name="sector" 
+                            id="sector" 
+                            value="{{ old('sector', $category->sector ?? '') }}" 
+                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            placeholder="Ej. Sector A - Estante 3 / Cámara Fría 2 / Pasillo B"
+                        >
+                        @error('sector')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <div class="mb-6">
                         <label for="user_id" class="block text-sm font-medium text-gray-700">Asignar Encargado</label>
                         <select name="user_id" id="user_id" 

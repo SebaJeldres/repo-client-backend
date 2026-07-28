@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ProductController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -32,6 +33,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 // Rutas compartidas (por ejemplo: Admin o manager)
 Route::middleware(['auth', 'role:admin|manager'])->group(function () {
     Route::resource('categories', CategoryController::class);
+    Route::resource('products', ProductController::class);
 });
 
 require __DIR__.'/auth.php';

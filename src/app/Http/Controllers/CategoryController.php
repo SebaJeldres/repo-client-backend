@@ -26,6 +26,7 @@ class CategoryController extends Controller
         $request->validate([
             'name' => 'required|string|max:255|unique:categories,name',
             'description' => 'nullable|string',
+            'sector' => 'nullable|string|max:255',
             'user_id' => 'nullable|exists:users,id',
         ]);
 
@@ -33,6 +34,7 @@ class CategoryController extends Controller
             'name' => $request->name,
             'slug' => Str::slug($request->name),
             'description' => $request->description,
+            'sector' => $request->sector,
             'user_id' => $request->user_id,
         ]);
 
@@ -44,28 +46,28 @@ class CategoryController extends Controller
     {
         $managers = User::role(['manager', 'admin'])->get();
         return view('categories.edit', compact('category', 'managers'));
-
     }
 
     public function update(Request $request, Category $category)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name',
+            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
             'description' => 'nullable|string',
-            'user_id' => 'nullable|exist:user_id',
-            'is_active' =>'boolean'
+            'sector' => 'nullable|string|max:255',
+            'user_id' => 'nullable|exists:users,id',
+            'is_active' => 'nullable|boolean'
         ]);
 
         $category->update([
             'name' => $request->name,
             'slug' => Str::slug($request->name),
             'description' => $request->description,
+            'sector' => $request->sector,
             'user_id' => $request->user_id,
             'is_active' => $request->has('is_active'),
         ]);
 
-        return redirect()->route('categories.index')->with('succes', 'Categoria actualizada exitosamente');
-
+        return redirect()->route('categories.index')->with('success', 'Categoría actualizada exitosamente.');
     }
 
     public function destroy(Category $category)
