@@ -11,12 +11,14 @@ class CategoryController extends Controller
 {
     public function index() {
         $categories = Category::with('manager')->paginate(10);
+
         return view('categories.index', compact('categories'));
     }
 
     public function create()
     {
         $managers = User::role(['manager', 'admin'])->get();
+        
         return view('categories.create', compact('managers'));
 
     }
@@ -45,6 +47,7 @@ class CategoryController extends Controller
     public function edit(Category $category)
     {
         $managers = User::role(['manager', 'admin'])->get();
+
         return view('categories.edit', compact('category', 'managers'));
     }
 
@@ -73,6 +76,7 @@ class CategoryController extends Controller
     public function destroy(Category $category)
     {
         $category->delete();
+
         return redirect()->route('categories.index')->with('succes', 'Categoria eliminada exitosamente');
     }
 

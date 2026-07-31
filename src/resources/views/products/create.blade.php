@@ -158,7 +158,7 @@
                     <!-- Descripción -->
                     <div class="mb-4">
                         <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
-                            Descripción
+                            Descripción 
                         </label>
                         <textarea 
                             name="description" 
@@ -193,7 +193,7 @@
                         </a>
                         <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded text-sm shadow">
                             Guardar Producto
-                        </button>
+                        </button> <!-- Botón de Guardar -->
                     </div>
                 </form>
 
