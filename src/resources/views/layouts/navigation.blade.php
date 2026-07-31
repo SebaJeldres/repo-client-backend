@@ -25,6 +25,10 @@
                         <x-nav-link :href="route('categories.index')" :active="request()->routeIs('categories.*')">
                             {{ __('Categorías') }}
                         </x-nav-link>
+
+                        <x-nav-link :href="route('invoices.upload')" :active="request()->routeIs('invoices.*')">
+                            {{ __('Escanear Factura (IA)') }}
+                        </x-nav-link>
                     @endhasanyrole
                 </div>
             </div>
@@ -86,6 +90,10 @@
             @hasanyrole('admin|manager')
                 <x-responsive-nav-link :href="route('categories.index')" :active="request()->routeIs('categories.*')">
                     {{ __('Categorías') }}
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('invoices.upload')" :active="request()->routeIs('invoices.*')">
+                    {{ __('Escanear Factura (IA)') }}
                 </x-responsive-nav-link>
             @endhasanyrole
         </div>
