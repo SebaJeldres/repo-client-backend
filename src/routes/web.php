@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\InvoiceController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -34,6 +35,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 Route::middleware(['auth', 'role:admin|manager'])->group(function () {
     Route::resource('categories', CategoryController::class);
     Route::resource('products', ProductController::class);
+    Route::get('/invoices/upload', [InvoiceController::class, 'index'])->name('invoices.upload');
+    Route::post('/invoices/process', [InvoiceController::class, 'process'])->name('invoices.process');
+    Route::post('/invoices/confirm', [InvoiceController::class, 'confirm'])->name('invoices.confirm');
 });
 
 require __DIR__.'/auth.php';
