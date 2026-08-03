@@ -115,17 +115,21 @@ class InvoiceController extends Controller
      */
     public function confirm(Request $request)
     {
-        // Validar la contraseña del usuario actual
         $request->validate([
             'password' => ['required', 'string'],
             'items' => ['required', 'array'],
+            'items.*.product_id' => ['required', 'exists:products,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
+        // Si la clave es incorrecta, devolvemos todo lo que venía en el formulario
         if (!Hash::check($request->password, $request->user()->password)) {
-            return back()->withErrors(['password' => 'La contraseña ingresada es incorrecta. Operación cancelada.']);
+            return back()
+                ->withInput()
+                ->withErrors(['password' => 'La contraseña ingresada es incorrecta. Operación cancelada.']);
         }
 
-        // Transacción Atómica para descontar stock en MySQL
+        // Transacción de actualización en Base de Datos
         DB::transaction(function () use ($request) {
             foreach ($request->items as $item) {
                 $product = Product::findOrFail($item['product_id']);
@@ -133,6 +137,6 @@ class InvoiceController extends Controller
             }
         });
 
-        return redirect()->route('products.index')->with('success', '¡Stock descontado exitosamente de la bodega!');
+        return redirect()->route('products.index')->with('success', '¡Inventario actualizado correctamente en la base de datos!');
     }
 }
