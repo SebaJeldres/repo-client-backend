@@ -37,6 +37,7 @@ Route::middleware(['auth', 'role:admin|manager'])->group(function () {
     Route::resource('products', ProductController::class);
     Route::get('/invoices/upload', [InvoiceController::class, 'index'])->name('invoices.upload');
     Route::post('/invoices/process', [InvoiceController::class, 'process'])->name('invoices.process');
+    Route::post('/invoices/confirm', [InvoiceController::class, 'confirm'])->name('invoices.confirm');
 });
 
 require __DIR__.'/auth.php';

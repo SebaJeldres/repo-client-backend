@@ -1,93 +1,141 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Procesador Inteligente de Facturas') }}
+            {{ __('Procesar Boleta / Factura') }}
         </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            
-            <!-- Formulario de Carga -->
-            <div class="p-6 bg-white shadow sm:rounded-lg">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Subir Documento (PDF o Imagen)</h3>
+    <div class="py-12 max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-                @if (session('success'))
-                    <div class="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
-                        {{ session('success') }}
-                    </div>
-                @endif
-
-                @if ($errors->any())
-                    <div class="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
-                        <ul class="list-disc pl-5">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                <form action="{{ route('invoices.process') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
-                    @csrf
-                    <div>
-                        <input type="file" name="invoice_file" accept=".pdf,.jpg,.jpeg,.png,.webp" required 
-                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-                    </div>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold">
-                        Analizar con IA
-                    </button>
-                </form>
+        <!-- Banner de ERRORES / RECHAZO DE BOLETA -->
+        @if (session('rejected_errors'))
+            <div class="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md">
+                <h3 class="font-bold text-lg mb-2">❌ Boleta Rechazada</h3>
+                <p class="text-sm mb-2">No se puede procesar el descuento debido a los siguientes problemas:</p>
+                <ul class="list-disc pl-5 text-sm space-y-1">
+                    @foreach (session('rejected_errors') as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
             </div>
+        @endif
 
-            <!-- Mostrar Resultados Extraídos por Gemini -->
-            @if (isset($invoiceData))
-                <div class="p-6 bg-white shadow sm:rounded-lg space-y-4">
-                    <h3 class="text-xl font-bold text-gray-800">Resultado de la Extracción</h3>
+        <!-- Formulario de Subida -->
+        <div class="p-6 bg-white shadow rounded-lg">
+            <form action="{{ route('invoices.process') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Seleccionar documento (PDF o Imagen)</label>
+                    <input type="file" name="invoice_file" required class="mt-1 block w-full border border-gray-300 rounded-md p-2">
+                </div>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700">
+                    Escanear y Validar Boleta
+                </button>
+            </form>
+        </div>
 
-                    <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-md">
-                        <div>
-                            <span class="font-semibold text-gray-600">Proveedor / Empresa:</span>
-                            <p class="text-gray-900 font-bold">{{ $invoiceData['supplier_name'] ?? 'No detectado' }}</p>
-                        </div>
-                        <div>
-                            <span class="font-semibold text-gray-600">N° Folio / Factura:</span>
-                            <p class="text-gray-900 font-bold">{{ $invoiceData['document_number'] ?? 'No detectado' }}</p>
-                        </div>
-                    </div>
-
-                    <h4 class="text-lg font-semibold text-gray-700 mt-6">Ítems / Productos Detectados</h4>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-100">
+        <!-- RESULTADOS Y CONFIRMACIÓN DE STOCK -->
+        @if (isset($processedItems) && count($processedItems) > 0)
+            <div class="p-6 bg-white shadow rounded-lg space-y-6">
+                
+                <!-- ALERTA VISUAL: Productos que quedan en Stock Mínimo -->
+                @if (count($lowStockAlerts) > 0)
+                    <div class="p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-800 rounded-md">
+                        <h4 class="font-bold text-md flex items-center gap-2">
+                            ⚠️ Advertencia de Stock Crítico
+                        </h4>
+                        <p class="text-sm mb-2">Los siguientes productos quedarán igual o por debajo de su stock mínimo tras esta operación:</p>
+                        <table class="w-full text-left text-xs bg-white rounded border border-amber-200 mt-2">
+                            <thead class="bg-amber-100">
                                 <tr>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Código / SKU</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio Unitario</th>
-                                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total Línea</th>
+                                    <th class="p-2">Producto</th>
+                                    <th class="p-2">Stock Actual</th>
+                                    <th class="p-2">Descuento</th>
+                                    <th class="p-2">Stock Final</th>
+                                    <th class="p-2">Stock Mínimo</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                @forelse ($invoiceData['items'] as $item)
-                                    <tr>
-                                        <td class="px-4 py-2 text-sm text-gray-600">{{ $item['sku_or_code'] ?? 'N/A' }}</td>
-                                        <td class="px-4 py-2 text-sm text-gray-900 font-medium">{{ $item['name'] }}</td>
-                                        <td class="px-4 py-2 text-sm text-gray-900 text-right">{{ $item['quantity'] }}</td>
-                                        <td class="px-4 py-2 text-sm text-gray-900 text-right">${{ number_format($item['unit_price'], 0, ',', '.') }}</td>
-                                        <td class="px-4 py-2 text-sm text-gray-900 text-right font-bold">${{ number_format($item['total_price'], 0, ',', '.') }}</td>
+                            <tbody>
+                                @foreach ($lowStockAlerts as $alert)
+                                    <tr class="border-t border-amber-100">
+                                        <td class="p-2 font-medium">{{ $alert['name'] }}</td>
+                                        <td class="p-2">{{ $alert['current_stock'] }}</td>
+                                        <td class="p-2 text-red-600 font-bold">-{{ $alert['discount'] }}</td>
+                                        <td class="p-2 font-bold text-amber-700">{{ $alert['final_stock'] }}</td>
+                                        <td class="p-2 text-gray-500">{{ $alert['minimum_stock'] }}</td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="5" class="px-4 py-2 text-sm text-center text-gray-500">No se encontraron productos.</td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
-                </div>
-            @endif
+                @endif
 
-        </div>
+                <!-- Tabla de Productos a Descontar -->
+                <h3 class="text-lg font-bold text-gray-800">Resumen de Productos Aceptados</h3>
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left">Código</th>
+                            <th class="px-3 py-2 text-left">Producto</th>
+                            <th class="px-3 py-2 text-center">Cantidad a Descontar</th>
+                            <th class="px-3 py-2 text-center">Stock Actual</th>
+                            <th class="px-3 py-2 text-center">Stock Resultante</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @foreach ($processedItems as $item)
+                            <tr>
+                                <td class="px-3 py-2 text-gray-500">{{ $item['code'] ?? 'N/A' }}</td>
+                                <td class="px-3 py-2 font-medium">{{ $item['name'] }}</td>
+                                <td class="px-3 py-2 text-center font-bold text-red-600">-{{ $item['quantity'] }}</td>
+                                <td class="px-3 py-2 text-center">{{ $item['current_stock'] }}</td>
+                                <td class="px-3 py-2 text-center font-bold text-green-600">{{ $item['final_stock'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+
+                <!-- Botón para abrir el Modal -->
+                <div class="flex justify-end">
+                    <button type="button" onclick="document.getElementById('confirmModal').classList.remove('hidden')" class="px-6 py-2 bg-green-600 text-white font-bold rounded-md hover:bg-green-700">
+                        Confirmar y Descontar Inventario
+                    </button>
+                </div>
+            </div>
+
+            <!-- MODAL DE SEGURIDAD -->
+            <div id="confirmModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-6 max-w-md w-full space-y-4 shadow-xl">
+                    <h3 class="text-lg font-bold text-gray-900">Confirmación de Seguridad</h3>
+                    <p class="text-sm text-gray-600">Por favor, ingresa tu contraseña para autorizar el descuento de stock en la bodega.</p>
+                    
+                    <form action="{{ route('invoices.confirm') }}" method="POST" class="space-y-4">
+                        @csrf
+                        @foreach ($processedItems as $index => $item)
+                            <input type="hidden" name="items[{{ $index }}][product_id]" value="{{ $item['product_id'] }}">
+                            <input type="hidden" name="items[{{ $index }}][quantity]" value="{{ $item['quantity'] }}">
+                        @endforeach
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Contraseña</label>
+                            <input type="password" name="password" required class="mt-1 block w-full border border-gray-300 rounded-md p-2" placeholder="••••••••">
+                            @error('password')
+                                <span class="text-xs text-red-600">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="flex justify-end space-x-2 pt-2">
+                            <button type="button" onclick="document.getElementById('confirmModal').classList.add('hidden')" class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 text-sm">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-4 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700 text-sm">
+                                Autorizar Descuento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        @endif
+
     </div>
 </x-app-layout>
