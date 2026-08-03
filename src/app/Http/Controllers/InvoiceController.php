@@ -24,7 +24,7 @@ class InvoiceController extends Controller
         $file = $request->file('invoice_file');
 
         try {
-            // 1. Obtener respuesta de FastAPI
+            // 1. Obtener respuesta del microservicio de FastAPI
             $response = Http::timeout(60)
                 ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
                 ->post('http://warehouse_ai_service:8000/api/v1/invoice/process');
@@ -41,35 +41,60 @@ class InvoiceController extends Controller
             $processedItems = [];
             $errors = [];
             $lowStockAlerts = [];
+            $hasError = false;
 
             // 2. Validar cada producto extraído contra la Base de Datos
             foreach ($items as $item) {
-                $code = $item['sku_or_code'] ?? null;
+                $code = $item['sku_or_code'] ?? $item['code'] ?? null;
                 $name = $item['name'] ?? '';
                 $qtyRequested = (int) ($item['quantity'] ?? 1);
 
-                // Buscar por código o por nombre exacto
-                $product = Product::where(function($query) use ($code, $name) {
-                    if ($code) $query->where('code', $code);
-                    $query->orWhere('name', 'LIKE', '%' . $name . '%');
+                // Buscar por código o por coincidencia parcial de nombre
+                $product = Product::where(function ($query) use ($code, $name) {
+                    if ($code) {
+                        $query->where('code', $code);
+                    }
+                    if ($name) {
+                        $query->orWhere('name', 'LIKE', '%' . $name . '%');
+                    }
                 })->first();
 
                 // Regla 1: ¿Existe el producto?
                 if (!$product) {
+                    $hasError = true;
+                    $processedItems[] = [
+                        'code' => $code ?? 'N/A',
+                        'name' => $name ?: 'Producto no encontrado',
+                        'quantity' => $qtyRequested,
+                        'current_stock' => '-',
+                        'final_stock' => '-',
+                        'status' => 'rejected',
+                        'reason' => 'El producto no existe en el sistema.'
+                    ];
                     $errors[] = "El producto '{$name}' (Código: " . ($code ?? 'N/A') . ") no existe en el inventario.";
                     continue;
                 }
 
+                $stockAfterDiscount = $product->stock - $qtyRequested;
+
                 // Regla 2: ¿Hay stock suficiente para el descuento?
                 if ($product->stock < $qtyRequested) {
+                    $hasError = true;
+                    $processedItems[] = [
+                        'product_id' => $product->id,
+                        'code' => $product->code,
+                        'name' => $product->name,
+                        'quantity' => $qtyRequested,
+                        'current_stock' => $product->stock,
+                        'final_stock' => $stockAfterDiscount,
+                        'status' => 'rejected',
+                        'reason' => "Stock insuficiente. Disponible: {$product->stock}, Solicitado: {$qtyRequested}"
+                    ];
                     $errors[] = "Stock insuficiente para '{$product->name}'. Disponible: {$product->stock}, Solicitado: {$qtyRequested}.";
                     continue;
                 }
 
-                // Calcular stock resultante
-                $stockAfterDiscount = $product->stock - $qtyRequested;
-
-                // Regla 3: ¿Quedará con stock menor o igual al mínimo?
+                // Regla 3: Si se aprueba, ¿Quedará con stock menor o igual al límite mínimo?
                 if ($stockAfterDiscount <= $product->minimum_stock) {
                     $lowStockAlerts[] = [
                         'id' => $product->id,
@@ -82,6 +107,7 @@ class InvoiceController extends Controller
                     ];
                 }
 
+                // Producto Aprobado
                 $processedItems[] = [
                     'product_id' => $product->id,
                     'name' => $product->name,
@@ -90,23 +116,23 @@ class InvoiceController extends Controller
                     'unit_price' => $item['unit_price'] ?? $product->price,
                     'current_stock' => $product->stock,
                     'final_stock' => $stockAfterDiscount,
+                    'status' => 'approved',
+                    'reason' => 'OK'
                 ];
             }
 
-            // RECHAZO TOTAL si hay errores de inexistencia o stock
-            if (count($errors) > 0) {
-                return back()->withInput()->with('rejected_errors', $errors);
-            }
-
+            // Devolver respuesta a la vista
             return view('invoices.upload', [
                 'invoiceData' => $extractedData,
                 'processedItems' => $processedItems,
                 'lowStockAlerts' => $lowStockAlerts,
-                'success' => 'Boleta analizada correctamente. Todos los productos existen y cuentan con stock.'
+                'rejectedErrors' => $errors,
+                'isRejected' => $hasError,
+                'success' => $hasError ? null : 'Boleta analizada correctamente. Todos los productos existen y cuentan con stock.'
             ]);
 
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Error al conectar con la IA: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Error al procesar la boleta: ' . $e->getMessage()]);
         }
     }
 
@@ -129,7 +155,7 @@ class InvoiceController extends Controller
                 ->withErrors(['password' => 'La contraseña ingresada es incorrecta. Operación cancelada.']);
         }
 
-        // Transacción de actualización en Base de Datos
+        // Transacción Atómica de actualización en Base de Datos
         DB::transaction(function () use ($request) {
             foreach ($request->items as $item) {
                 $product = Product::findOrFail($item['product_id']);
