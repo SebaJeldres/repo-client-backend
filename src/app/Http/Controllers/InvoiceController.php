@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\Invoice;
+use App\Jobs\ProcessInvoiceVectorization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Hash;
@@ -121,14 +123,34 @@ class InvoiceController extends Controller
                 ];
             }
 
+            // 3. Si la boleta es válida, guardar en BD y despachar Job de vectorización
+            if (!$hasError) {
+                // Guardar archivo físico en almacenamiento
+                $filePath = $file->store('invoices', 'public');
+
+                // Crear registro en la tabla invoices
+                $invoice = Invoice::create([
+                    'user_id'        => $request->user()->id,
+                    'invoice_number' => $extractedData['invoice_number'] ?? 'N/A',
+                    'supplier_name'  => $extractedData['supplier_name'] ?? 'Proveedor Desconocido',
+                    'total_amount'   => $extractedData['total_amount'] ?? 0,
+                    'issue_date'     => $extractedData['issue_date'] ?? now()->toDateString(),
+                    'file_path'      => $filePath,
+                    'vector_status'  => 'pending',
+                ]);
+
+                // Despachar el Job para procesar y guardar en la BD Vectorial
+                ProcessInvoiceVectorization::dispatch($invoice);
+            }
+
             // Devolver respuesta a la vista
             return view('invoices.upload', [
-                'invoiceData' => $extractedData,
+                'invoiceData'    => $extractedData,
                 'processedItems' => $processedItems,
                 'lowStockAlerts' => $lowStockAlerts,
                 'rejectedErrors' => $errors,
-                'isRejected' => $hasError,
-                'success' => $hasError ? null : 'Boleta analizada correctamente. Todos los productos existen y cuentan con stock.'
+                'isRejected'     => $hasError,
+                'success'        => $hasError ? null : 'Boleta analizada correctamente. Se ha encolado para su vectorización.'
             ]);
 
         } catch (\Exception $e) {
@@ -142,10 +164,10 @@ class InvoiceController extends Controller
     public function confirm(Request $request)
     {
         $request->validate([
-            'password' => ['required', 'string'],
-            'items' => ['required', 'array'],
+            'password'           => ['required', 'string'],
+            'items'              => ['required', 'array'],
             'items.*.product_id' => ['required', 'exists:products,id'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity'   => ['required', 'integer', 'min:1'],
         ]);
 
         // Si la clave es incorrecta, devolvemos todo lo que venía en el formulario
