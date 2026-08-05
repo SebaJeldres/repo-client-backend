@@ -163,6 +163,6 @@ class InvoiceController extends Controller
             }
         });
 
-        return redirect()->route('products.index')->with('success', '¡Inventario actualizado correctamente en la base de datos!');
+        return redirect()->route('products.index')->with('success', '¡Inventario actualizado correctamente!');
     }
 }
