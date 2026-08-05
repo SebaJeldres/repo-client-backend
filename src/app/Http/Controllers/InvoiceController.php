@@ -125,10 +125,10 @@ class InvoiceController extends Controller
 
             // 3. Si la boleta es válida, guardar en BD y despachar Job de vectorización
             if (!$hasError) {
-                // Guardar archivo físico en almacenamiento
+                // Guardar archivo físico
                 $filePath = $file->store('invoices', 'public');
 
-                // Crear registro en la tabla invoices
+                // Crear registro en BD
                 $invoice = Invoice::create([
                     'user_id'        => $request->user()->id,
                     'invoice_number' => $extractedData['invoice_number'] ?? 'N/A',
@@ -139,8 +139,8 @@ class InvoiceController extends Controller
                     'vector_status'  => 'pending',
                 ]);
 
-                // Despachar el Job para procesar y guardar en la BD Vectorial
-                ProcessInvoiceVectorization::dispatch($invoice);
+                // 💡 PASAMOS LOS ITEMS EN EL SEGUNDO PARÁMETRO
+                ProcessInvoiceVectorization::dispatch($invoice, $processedItems);
             }
 
             // Devolver respuesta a la vista

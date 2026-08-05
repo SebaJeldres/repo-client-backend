@@ -57,7 +57,7 @@ class ProcessInvoiceVectorization implements ShouldQueue
 
         try {
             // 3. Petición HTTP al microservicio Python (ai_service)
-            $response = Http::timeout(15)->post('http://ai_service:8000/api/vectorize-invoice', [
+            $response = Http::timeout(15)->post('http://warehouse_ai_service:8000/api/v1/invoice/vectorize', [
                 'invoice_id'    => $this->invoice->id,
                 'document_text' => $textPayload,
                 'metadata'      => [
