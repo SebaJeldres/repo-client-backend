@@ -16,7 +16,6 @@
                         {{ __('Dashboard') }}
                     </x-nav-link>
 
-                    {{-- Enlace a Categorías --}}
                     @hasanyrole('admin|manager')
                         <x-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
                             {{ __('Productos') }}
@@ -28,6 +27,11 @@
 
                         <x-nav-link :href="route('invoices.upload')" :active="request()->routeIs('invoices.*')">
                             {{ __('Escanear Factura (IA)') }}
+                        </x-nav-link>
+
+                        {{-- Nuevo Enlace a BD Vectorial --}}
+                        <x-nav-link :href="route('vector-db.index')" :active="request()->routeIs('vector-db.*')">
+                            {{ __('BD Vectorial') }}
                         </x-nav-link>
                     @endhasanyrole
                 </div>
@@ -86,14 +90,22 @@
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
 
-            {{-- Enlace a Categorías (Móvil) --}}
             @hasanyrole('admin|manager')
+                <x-responsive-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
+                    {{ __('Productos') }}
+                </x-responsive-nav-link>
+
                 <x-responsive-nav-link :href="route('categories.index')" :active="request()->routeIs('categories.*')">
                     {{ __('Categorías') }}
                 </x-responsive-nav-link>
 
                 <x-responsive-nav-link :href="route('invoices.upload')" :active="request()->routeIs('invoices.*')">
                     {{ __('Escanear Factura (IA)') }}
+                </x-responsive-nav-link>
+
+                {{-- Nuevo Enlace a BD Vectorial (Móvil) --}}
+                <x-responsive-nav-link :href="route('vector-db.index')" :active="request()->routeIs('vector-db.*')">
+                    {{ __('BD Vectorial') }}
                 </x-responsive-nav-link>
             @endhasanyrole
         </div>
