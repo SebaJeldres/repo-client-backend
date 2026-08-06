@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class InvoiceController extends Controller
 {
@@ -17,6 +18,9 @@ class InvoiceController extends Controller
         return view('invoices.upload');
     }
 
+    /**
+     * Procesa la imagen/PDF con la IA y valida contra la base de datos (Pre-visualización)
+     */
     public function process(Request $request)
     {
         $request->validate([
@@ -65,13 +69,13 @@ class InvoiceController extends Controller
                 if (!$product) {
                     $hasError = true;
                     $processedItems[] = [
-                        'code' => $code ?? 'N/A',
-                        'name' => $name ?: 'Producto no encontrado',
-                        'quantity' => $qtyRequested,
+                        'code'          => $code ?? 'N/A',
+                        'name'          => $name ?: 'Producto no encontrado',
+                        'quantity'      => $qtyRequested,
                         'current_stock' => '-',
-                        'final_stock' => '-',
-                        'status' => 'rejected',
-                        'reason' => 'El producto no existe en el sistema.'
+                        'final_stock'   => '-',
+                        'status'        => 'rejected',
+                        'reason'        => 'El producto no existe en el sistema.'
                     ];
                     $errors[] = "El producto '{$name}' (Código: " . ($code ?? 'N/A') . ") no existe en el inventario.";
                     continue;
@@ -83,14 +87,14 @@ class InvoiceController extends Controller
                 if ($product->stock < $qtyRequested) {
                     $hasError = true;
                     $processedItems[] = [
-                        'product_id' => $product->id,
-                        'code' => $product->code,
-                        'name' => $product->name,
-                        'quantity' => $qtyRequested,
+                        'product_id'    => $product->id,
+                        'code'          => $product->code,
+                        'name'          => $product->name,
+                        'quantity'      => $qtyRequested,
                         'current_stock' => $product->stock,
-                        'final_stock' => $stockAfterDiscount,
-                        'status' => 'rejected',
-                        'reason' => "Stock insuficiente. Disponible: {$product->stock}, Solicitado: {$qtyRequested}"
+                        'final_stock'   => $stockAfterDiscount,
+                        'status'        => 'rejected',
+                        'reason'        => "Stock insuficiente. Disponible: {$product->stock}, Solicitado: {$qtyRequested}"
                     ];
                     $errors[] = "Stock insuficiente para '{$product->name}'. Disponible: {$product->stock}, Solicitado: {$qtyRequested}.";
                     continue;
@@ -99,58 +103,42 @@ class InvoiceController extends Controller
                 // Regla 3: Si se aprueba, ¿Quedará con stock menor o igual al límite mínimo?
                 if ($stockAfterDiscount <= $product->minimum_stock) {
                     $lowStockAlerts[] = [
-                        'id' => $product->id,
-                        'name' => $product->name,
-                        'code' => $product->code,
+                        'id'            => $product->id,
+                        'name'          => $product->name,
+                        'code'          => $product->code,
                         'current_stock' => $product->stock,
-                        'discount' => $qtyRequested,
-                        'final_stock' => $stockAfterDiscount,
+                        'discount'      => $qtyRequested,
+                        'final_stock'   => $stockAfterDiscount,
                         'minimum_stock' => $product->minimum_stock
                     ];
                 }
 
                 // Producto Aprobado
                 $processedItems[] = [
-                    'product_id' => $product->id,
-                    'name' => $product->name,
-                    'code' => $product->code,
-                    'quantity' => $qtyRequested,
-                    'unit_price' => $item['unit_price'] ?? $product->price,
+                    'product_id'    => $product->id,
+                    'name'          => $product->name,
+                    'code'          => $product->code,
+                    'quantity'      => $qtyRequested,
+                    'unit_price'    => $item['unit_price'] ?? $product->price,
                     'current_stock' => $product->stock,
-                    'final_stock' => $stockAfterDiscount,
-                    'status' => 'approved',
-                    'reason' => 'OK'
+                    'final_stock'   => $stockAfterDiscount,
+                    'status'        => 'approved',
+                    'reason'        => 'OK'
                 ];
             }
 
-            // 3. Si la boleta es válida, guardar en BD y despachar Job de vectorización
-            if (!$hasError) {
-                // Guardar archivo físico
-                $filePath = $file->store('invoices', 'public');
+            // Guardar archivo temporalmente para moverlo en la confirmación
+            $tempFilePath = $file->store('temp_invoices', 'public');
 
-                // Crear registro en BD
-                $invoice = Invoice::create([
-                    'user_id'        => $request->user()->id,
-                    'invoice_number' => $extractedData['invoice_number'] ?? 'N/A',
-                    'supplier_name'  => $extractedData['supplier_name'] ?? 'Proveedor Desconocido',
-                    'total_amount'   => $extractedData['total_amount'] ?? 0,
-                    'issue_date'     => $extractedData['issue_date'] ?? now()->toDateString(),
-                    'file_path'      => $filePath,
-                    'vector_status'  => 'pending',
-                ]);
-
-                // 💡 PASAMOS LOS ITEMS EN EL SEGUNDO PARÁMETRO
-                ProcessInvoiceVectorization::dispatch($invoice, $processedItems);
-            }
-
-            // Devolver respuesta a la vista
+            // Devolver respuesta a la vista previa para confirmación del usuario
             return view('invoices.upload', [
                 'invoiceData'    => $extractedData,
                 'processedItems' => $processedItems,
                 'lowStockAlerts' => $lowStockAlerts,
                 'rejectedErrors' => $errors,
                 'isRejected'     => $hasError,
-                'success'        => $hasError ? null : 'Boleta analizada correctamente. Se ha encolado para su vectorización.'
+                'tempFilePath'   => $tempFilePath,
+                'success'        => $hasError ? null : 'Boleta analizada correctamente. Revisa la información y confirma la operación.'
             ]);
 
         } catch (\Exception $e) {
@@ -159,7 +147,7 @@ class InvoiceController extends Controller
     }
 
     /**
-     * Procesa la confirmación final descontando el stock
+     * Procesa la confirmación final: descuenta stock, guarda la factura y gatilla la vectorización
      */
     public function confirm(Request $request)
     {
@@ -168,23 +156,61 @@ class InvoiceController extends Controller
             'items'              => ['required', 'array'],
             'items.*.product_id' => ['required', 'exists:products,id'],
             'items.*.quantity'   => ['required', 'integer', 'min:1'],
+            'invoice_number'     => ['nullable', 'string'],
+            'supplier_name'      => ['nullable', 'string'],
+            'total_amount'       => ['nullable', 'numeric'],
+            'issue_date'         => ['nullable', 'date'],
+            'temp_file_path'     => ['nullable', 'string'],
         ]);
 
-        // Si la clave es incorrecta, devolvemos todo lo que venía en el formulario
+        // Verificar contraseña del usuario
         if (!Hash::check($request->password, $request->user()->password)) {
             return back()
                 ->withInput()
                 ->withErrors(['password' => 'La contraseña ingresada es incorrecta. Operación cancelada.']);
         }
 
-        // Transacción Atómica de actualización en Base de Datos
-        DB::transaction(function () use ($request) {
-            foreach ($request->items as $item) {
-                $product = Product::findOrFail($item['product_id']);
-                $product->decrement('stock', $item['quantity']);
-            }
-        });
+        try {
+            $invoice = null;
 
-        return redirect()->route('products.index')->with('success', '¡Inventario actualizado correctamente!');
+            // Transacción atómica en BD MySQL
+            DB::transaction(function () use ($request, &$invoice) {
+                // 1. Mover archivo temporal a carpeta definitiva
+                $finalFilePath = $request->temp_file_path;
+                if ($request->temp_file_path && Storage::disk('public')->exists($request->temp_file_path)) {
+                    $fileName = basename($request->temp_file_path);
+                    $finalFilePath = 'invoices/' . $fileName;
+                    Storage::disk('public')->move($request->temp_file_path, $finalFilePath);
+                }
+
+                // 2. Crear registro oficial de la Factura en BD
+                $invoice = Invoice::create([
+                    'user_id'        => $request->user()->id,
+                    'invoice_number' => $request->input('invoice_number', 'N/A'),
+                    'supplier_name'  => $request->input('supplier_name', 'Proveedor Desconocido'),
+                    'total_amount'   => $request->input('total_amount', 0),
+                    'issue_date'     => $request->input('issue_date', now()->toDateString()),
+                    'file_path'      => $finalFilePath ?? 'invoices/default.pdf',
+                    'vector_status'  => 'pending',
+                ]);
+
+                // 3. Descontar el stock de los productos
+                foreach ($request->items as $item) {
+                    $product = Product::findOrFail($item['product_id']);
+                    $product->decrement('stock', $item['quantity']);
+                }
+            });
+
+            // 4. DESPACHAR JOB DE VECTORIZACIÓN SOLO TRAS CONFIRMAR EXITOSAMENTE
+            if ($invoice) {
+                ProcessInvoiceVectorization::dispatch($invoice, $request->items);
+            }
+
+            return redirect()->route('products.index')
+                ->with('success', '¡Inventario actualizado y boleta enviada a vectorizar con éxito!');
+
+        } catch (\Exception $e) {
+            return back()->withInput()->withErrors(['error' => 'Error al confirmar la boleta: ' . $e->getMessage()]);
+        }
     }
 }

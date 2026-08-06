@@ -66,7 +66,14 @@
             <form action="{{ route('invoices.confirm') }}" method="POST" class="space-y-4">
                 @csrf
                 
-                <!-- Inputs Ocultos -->
+                {{-- ⚠️ CAMPOS FALTANTES QUE CAUSABAN EL PROBLEMA DE CABECERA ⚠️ --}}
+                <input type="hidden" name="invoice_number" value="{{ $invoiceData['invoice_number'] ?? old('invoice_number', 'N/A') }}">
+                <input type="hidden" name="supplier_name" value="{{ $invoiceData['supplier_name'] ?? old('supplier_name', 'Proveedor Desconocido') }}">
+                <input type="hidden" name="total_amount" value="{{ $invoiceData['total_amount'] ?? old('total_amount', 0) }}">
+                <input type="hidden" name="issue_date" value="{{ $invoiceData['issue_date'] ?? old('issue_date', date('Y-m-d')) }}">
+                <input type="hidden" name="temp_file_path" value="{{ $tempFilePath ?? old('temp_file_path', '') }}">
+
+                <!-- Inputs Ocultos (Ítems) -->
                 @foreach ($items as $index => $item)
                     @if (isset($item['product_id']))
                         <input type="hidden" name="items[{{ $index }}][product_id]" value="{{ $item['product_id'] }}">

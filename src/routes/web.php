@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\VectorDatabaseController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -38,6 +39,7 @@ Route::middleware(['auth', 'role:admin|manager'])->group(function () {
     Route::get('/invoices/upload', [InvoiceController::class, 'index'])->name('invoices.upload');
     Route::post('/invoices/process', [InvoiceController::class, 'process'])->name('invoices.process');
     Route::post('/invoices/confirm', [InvoiceController::class, 'confirm'])->name('invoices.confirm');
+    Route::get('/vector-db', [VectorDatabaseController::class, 'index'])->name('vector-db.index');
 });
 
 require __DIR__.'/auth.php';
