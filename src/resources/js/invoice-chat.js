@@ -69,12 +69,22 @@ document.addEventListener('DOMContentLoaded', function () {
             div.className = 'flex gap-3 max-w-2xl';
 
             let sourcesHtml = '';
-            if (sources && sources.length > 0) {
+            
+            // 🛑 CONDICIÓN MEJORADA: Solo mostrar fuentes si la IA NO dio una respuesta negativa
+            const isNotFoundResponse = text.toLowerCase().includes('no dispongo') || text.toLowerCase().includes('no se encontró');
+
+            if (sources && sources.length > 0 && !isNotFoundResponse) {
+                // Eliminar duplicados de fuentes por número de factura
+                const uniqueSources = Array.from(new Set(sources.map(s => s.invoice_number)))
+                    .map(num => sources.find(s => s.invoice_number === num));
+
                 sourcesHtml = `<div class="mt-3 pt-2 border-t border-slate-100 flex flex-wrap gap-1.5 items-center">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase">Fuentes:</span>`;
-                sources.forEach(s => {
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Documentos de origen:</span>`;
+                
+                uniqueSources.forEach(s => {
+                    const docNum = s.invoice_number !== 'N/A' ? `#${s.invoice_number}` : 'Sin N°';
                     sourcesHtml += `<span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-mono rounded border border-slate-200">
-                        📄 Factura #${s.invoice_number} (${s.supplier_name})
+                        📄 Factura ${docNum} (${s.supplier_name})
                     </span>`;
                 });
                 sourcesHtml += `</div>`;
