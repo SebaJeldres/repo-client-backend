@@ -25,11 +25,16 @@
                             {{ __('Categorías') }}
                         </x-nav-link>
 
-                        <x-nav-link :href="route('invoices.upload')" :active="request()->routeIs('invoices.*')">
+                        <x-nav-link :href="route('invoices.upload')" :active="request()->routeIs('invoices.upload')">
                             {{ __('Escanear Factura (IA)') }}
                         </x-nav-link>
 
-                        {{-- Nuevo Enlace a BD Vectorial --}}
+                        {{-- Nuevo Enlace al Chat de IA --}}
+                        <x-nav-link :href="route('invoices.chat')" :active="request()->routeIs('invoices.chat')">
+                            {{ __('Asistente IA') }}
+                        </x-nav-link>
+
+                        {{-- Enlace a BD Vectorial --}}
                         <x-nav-link :href="route('vector-db.index')" :active="request()->routeIs('vector-db.*')">
                             {{ __('BD Vectorial') }}
                         </x-nav-link>
@@ -99,11 +104,15 @@
                     {{ __('Categorías') }}
                 </x-responsive-nav-link>
 
-                <x-responsive-nav-link :href="route('invoices.upload')" :active="request()->routeIs('invoices.*')">
+                <x-responsive-nav-link :href="route('invoices.upload')" :active="request()->routeIs('invoices.upload')">
                     {{ __('Escanear Factura (IA)') }}
                 </x-responsive-nav-link>
 
-                {{-- Nuevo Enlace a BD Vectorial (Móvil) --}}
+                {{-- Nuevo Enlace al Chat de IA (Móvil) --}}
+                <x-responsive-nav-link :href="route('invoices.chat')" :active="request()->routeIs('invoices.chat')">
+                    {{ __('Asistente IA') }}
+                </x-responsive-nav-link>
+
                 <x-responsive-nav-link :href="route('vector-db.index')" :active="request()->routeIs('vector-db.*')">
                     {{ __('BD Vectorial') }}
                 </x-responsive-nav-link>
