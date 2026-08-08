@@ -39,19 +39,24 @@ class ProcessInvoiceVectorization implements ShouldQueue
             'vector_error'  => null,
         ]);
 
-        // 2. Construir el texto estructurado para el embedding RAG
-        $textPayload = "Boleta N°: " . ($this->invoice->invoice_number ?? 'S/N') . "\n";
-        $textPayload .= "Proveedor: " . ($this->invoice->supplier_name ?? 'Desconocido') . "\n";
-        $textPayload .= "Fecha: " . ($this->invoice->issue_date ?? 'N/A') . "\n";
-        $textPayload .= "Total: $" . number_format((float) $this->invoice->total_amount, 2) . "\n";
+        // Formatear fechas claramente
+        $registeredAt = $this->invoice->created_at ? $this->invoice->created_at->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s');
+        $issueDate = $this->invoice->issue_date ?? 'N/A';
+
+        // 2. Construir el texto estructurado para el embedding RAG (Diferenciando Fechas)
+        $textPayload = "DOCUMENTO / BOLETA / FACTURA N°: " . ($this->invoice->invoice_number ?? 'S/N') . "\n";
+        $textPayload .= "FECHA DE REGISTRO / INGRESO EN SISTEMA: {$registeredAt}\n";
+        $textPayload .= "FECHA DE EMISIÓN / FECHA COMPROBANTE: {$issueDate}\n";
+        $textPayload .= "PROVEEDOR / EMPRESA EMISORA / VENDEDOR: " . ($this->invoice->supplier_name ?? 'Desconocido') . "\n";
+        $textPayload .= "VALOR TOTAL / MONTO TOTAL / PRECIO / COSTO FINAL: $" . number_format((float) $this->invoice->total_amount, 2) . "\n\n";
 
         if (!empty($this->items)) {
-            $textPayload .= "Detalle de Productos:\n";
+            $textPayload .= "DETALLE DE PRODUCTOS / ÍTEMS / COMPRAS:\n";
             foreach ($this->items as $item) {
                 $name = $item['name'] ?? 'Producto';
                 $qty  = $item['quantity'] ?? 1;
-                $code = $item['code'] ?? 'N/A';
-                $textPayload .= "- Código: {$code} | {$name} | Cantidad: {$qty}\n";
+                $code = $item['code'] ?? $item['sku_or_code'] ?? 'N/A';
+                $textPayload .= "- Código/SKU: {$code} | Producto/Ítem: {$name} | Cantidad: {$qty}\n";
             }
         }
 
@@ -61,8 +66,10 @@ class ProcessInvoiceVectorization implements ShouldQueue
                 'invoice_id'    => $this->invoice->id,
                 'document_text' => $textPayload,
                 'metadata'      => [
-                    'invoice_number' => $this->invoice->invoice_number,
-                    'supplier_name'  => $this->invoice->supplier_name,
+                    'invoice_number' => $this->invoice->invoice_number ?? 'S/N',
+                    'supplier_name'  => $this->invoice->supplier_name ?? 'Desconocido',
+                    'issue_date'     => $issueDate,
+                    'created_at'     => $registeredAt,
                     'total_amount'   => (float) $this->invoice->total_amount,
                     'user_id'        => $this->invoice->user_id,
                     'file_path'      => $this->invoice->file_path,
