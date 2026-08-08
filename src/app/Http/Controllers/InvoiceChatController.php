@@ -20,7 +20,7 @@ class InvoiceChatController extends Controller
      */
     public function index()
     {
-        return view('invoices.chat');
+        //
     }
 
     /**

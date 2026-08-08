@@ -41,7 +41,6 @@ Route::middleware(['auth', 'role:admin|manager'])->group(function () {
     Route::post('/invoices/process', [InvoiceController::class, 'process'])->name('invoices.process');
     Route::post('/invoices/confirm', [InvoiceController::class, 'confirm'])->name('invoices.confirm');
     Route::get('/vector-db', [VectorDatabaseController::class, 'index'])->name('vector-db.index');
-    Route::get('/invoices/chat', [InvoiceChatController::class, 'index'])->name('invoices.chat');
     Route::post('/invoices/chat/ask', [InvoiceChatController::class, 'ask'])->name('invoices.chat.ask');
 });
 
