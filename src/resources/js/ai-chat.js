@@ -25,13 +25,11 @@ function toggleAiChat() {
     const isOpen = !drawer.classList.contains('translate-x-full');
 
     if (isOpen) {
-        // Cerrar
         drawer.classList.add('translate-x-full');
         backdrop?.classList.add('opacity-0');
         setTimeout(() => backdrop?.classList.add('hidden'), 300);
         sessionStorage.setItem(STATE_KEY, 'false');
     } else {
-        // Abrir
         backdrop?.classList.remove('hidden');
         setTimeout(() => backdrop?.classList.remove('opacity-0'), 10);
         drawer.classList.remove('translate-x-full');
@@ -49,12 +47,10 @@ async function submitAiChat(e) {
     const query = chatInput.value.trim();
     if (!query) return;
 
-    // Renderizar mensaje del usuario
     appendMessage('user', query);
     chatInput.value = '';
     saveChatHistory();
 
-    // Mostrar spinner
     if (loadingIndicator) loadingIndicator.classList.remove('hidden');
     scrollToBottom();
 
@@ -96,7 +92,7 @@ async function submitAiChat(e) {
     scrollToBottom();
 }
 
-// 3. Renderizar Mensajes con Filtro de Fuentes Únicas y Detección de Negativas
+// 3. Renderizar Mensajes
 function appendMessage(sender, text, sources = []) {
     if (!chatMessages) getDomElements();
     if (!chatMessages) return;
@@ -106,7 +102,7 @@ function appendMessage(sender, text, sources = []) {
     if (sender === 'user') {
         messageDiv.className = 'flex justify-end';
         messageDiv.innerHTML = `
-            <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none shadow-sm max-w-[85%] leading-relaxed">
+            <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none shadow-sm max-w-[85%] text-sm leading-relaxed">
                 ${escapeHtml(text)}
             </div>
         `;
@@ -115,13 +111,11 @@ function appendMessage(sender, text, sources = []) {
 
         let sourcesHtml = '';
         
-        // Detección de respuestas donde no se halló información
         const isNotFoundResponse = text.toLowerCase().includes('no dispongo') || 
                                    text.toLowerCase().includes('no se encontró') || 
                                    text.toLowerCase().includes('no se encontraron');
 
         if (sources && sources.length > 0 && !isNotFoundResponse) {
-            // Eliminar duplicados de fuentes por número de factura
             const uniqueSources = Array.from(new Set(sources.map(s => s.invoice_number)))
                 .map(num => sources.find(s => s.invoice_number === num));
 
@@ -139,11 +133,12 @@ function appendMessage(sender, text, sources = []) {
             `;
         }
 
+        // Removida la clase "leading-relaxed" global que deformaba la tabla
         messageDiv.innerHTML = `
             <div class="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold text-xs flex-shrink-0">
                 AI
             </div>
-            <div class="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 p-3 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-700 max-w-[85%] leading-relaxed">
+            <div class="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 p-3 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-700 max-w-[85%] text-sm">
                 ${formatMarkdown(text)}
                 ${sourcesHtml}
             </div>
@@ -172,9 +167,70 @@ function escapeHtml(text) {
 }
 
 function formatMarkdown(text) {
-    return escapeHtml(text)
-        .replace(/\n/g, '<br>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    if (!text) return '';
+
+    let html = escapeHtml(text.trim());
+
+    // 1. Convertir Tablas Markdown
+    const tableRegex = /\|(.+)\|\r?\n\|[ -|:-]+\|\r?\n((\|.+\|\r?\n?)+)/g;
+
+    html = html.replace(tableRegex, (match) => {
+        const lines = match.trim().split(/\r?\n/).filter(line => line.trim() !== '');
+
+        if (lines.length < 2) return match;
+
+        const headers = lines[0].split('|').filter(cell => cell.trim() !== '');
+        const rows = lines.slice(2).map(line => line.split('|').filter(cell => cell.trim() !== ''));
+
+        let tableHtml = '<div class="overflow-x-auto my-2 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">' +
+            '<table class="w-full text-left text-xs border-collapse" style="margin: 0 !important; border-spacing: 0;">' +
+                '<thead class="bg-indigo-50 dark:bg-gray-800 text-indigo-900 dark:text-indigo-200 font-semibold">' +
+                    '<tr>' +
+                        headers.map(h => `<th class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">${h.trim()}</th>`).join('') +
+                    '</tr>' +
+                '</thead>' +
+                '<tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">';
+
+        rows.forEach(row => {
+            if (row.length > 0) {
+                // Sin clases de hover en las filas (<tr>)
+                tableHtml += '<tr>';
+                row.forEach(cell => {
+                    tableHtml += `<td class="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">${cell.trim()}</td>`;
+                });
+                tableHtml += '</tr>';
+            }
+        });
+
+        tableHtml += '</tbody></table></div>';
+
+        return `___TABLE_START___${tableHtml}___TABLE_END___`;
+    });
+
+    // 2. Encabezados, código, negritas e itálicas
+    html = html.replace(/^### (.*$)/gim, '<h3 class="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-2 mb-1">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2 class="text-base font-bold text-indigo-700 dark:text-indigo-300 mt-2 mb-1">$1</h2>');
+    html = html.replace(/^---$/gim, '<hr class="my-2 border-gray-200 dark:border-gray-700">');
+    html = html.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 rounded text-xs font-mono">$1</code>');
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+    // 3. Separar por bloques para NO meter <br> dentro de la tabla
+    const parts = html.split(/(___TABLE_START___[\s\S]*?___TABLE_END___)/g);
+
+    html = parts.map(part => {
+        if (part.startsWith('___TABLE_START___')) {
+            return part.replace('___TABLE_START___', '').replace('___TABLE_END___', '');
+        } else {
+            return part.replace(/\r?\n/g, '<br>');
+        }
+    }).join('');
+
+    // 4. Limpieza de <br> innecesarios alrededor del contenedor
+    html = html.replace(/(<br\s*\/?>\s*)+(<div class="overflow-x-auto)/g, '$2');
+    html = html.replace(/(<\/div>)\s*(<br\s*\/?>)+/g, '$1');
+
+    return html.trim();
 }
 
 function saveChatHistory() {
@@ -208,7 +264,7 @@ function clearAiChat() {
                 <div class="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold text-xs flex-shrink-0">
                     AI
                 </div>
-                <div class="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 p-3 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-700 max-w-[85%]">
+                <div class="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 p-3 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-700 max-w-[85%] text-sm">
                     ¡Conversación reiniciada! ¿En qué te puedo ayudar?
                 </div>
             </div>
@@ -275,7 +331,16 @@ if (document.readyState === 'loading') {
     initResizeHandle();
 }
 
+function sendQuickPrompt(promptText) {
+    if (!chatInput) getDomElements();
+    if (chatInput) {
+        chatInput.value = promptText;
+        submitAiChat();
+    }
+}
+
 // Exponer funciones globales para eventos inline de HTML
 window.toggleAiChat = toggleAiChat;
 window.submitAiChat = submitAiChat;
 window.clearAiChat = clearAiChat;
+window.sendQuickPrompt = sendQuickPrompt;
