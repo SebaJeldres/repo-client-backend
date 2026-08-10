@@ -44,6 +44,16 @@
             </div>
             <div class="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 p-3 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-700 max-w-[85%]">
                 ¡Hola! Puedo responder preguntas sobre tus facturas, productos, precios y fechas de emisión o registro. ¿En qué te ayudo?
+                <div class="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-1.5">
+                    <button onclick="sendQuickPrompt('¿Cuál es el resumen de las últimas facturas?')" 
+                            class="text-xs bg-indigo-50 hover:bg-indigo-100 dark:bg-gray-700 dark:hover:bg-gray-600 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-full transition border border-indigo-100 dark:border-gray-600">
+                        📊 Resumen de facturas
+                    </button>
+                    <button onclick="sendQuickPrompt('¿Cuál es el monto total acumulado en dinero?')" 
+                            class="text-xs bg-indigo-50 hover:bg-indigo-100 dark:bg-gray-700 dark:hover:bg-gray-600 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-full transition border border-indigo-100 dark:border-gray-600">
+                        💰 Monto total
+                    </button>
+                </div>
             </div>
         </div>
     </div>
