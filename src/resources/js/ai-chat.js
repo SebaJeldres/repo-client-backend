@@ -9,6 +9,8 @@ const STORAGE_KEY = 'ai_chat_history';
 const STATE_KEY = 'ai_chat_is_open';
 const WIDTH_KEY = 'ai_chat_width';
 
+let tableCounter = 0; // Contador global para dar un ID único a cada tabla renderizada
+
 function getDomElements() {
     drawer = document.getElementById('ai-chat-drawer');
     backdrop = document.getElementById('ai-chat-backdrop');
@@ -133,7 +135,6 @@ function appendMessage(sender, text, sources = []) {
             `;
         }
 
-        // Removida la clase "leading-relaxed" global que deformaba la tabla
         messageDiv.innerHTML = `
             <div class="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold text-xs flex-shrink-0">
                 AI
@@ -179,11 +180,26 @@ function formatMarkdown(text) {
 
         if (lines.length < 2) return match;
 
+        tableCounter++;
+        const tableId = `ai-table-${tableCounter}`;
+
         const headers = lines[0].split('|').filter(cell => cell.trim() !== '');
         const rows = lines.slice(2).map(line => line.split('|').filter(cell => cell.trim() !== ''));
 
         let tableHtml = '<div class="overflow-x-auto my-2 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">' +
-            '<table class="w-full text-left text-xs border-collapse" style="margin: 0 !important; border-spacing: 0;">' +
+            /* Contenedor superior solo con los nuevos botones */
+            '<div class="p-2 border-b border-gray-200 dark:border-gray-700 flex justify-end items-center space-x-1.5 select-none bg-gray-50/50 dark:bg-gray-800/50">' +
+                `<button type="button" onclick="exportTableToExcel('${tableId}')" title="Exportar a Excel" class="px-2 py-1 inline-flex items-center space-x-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-md text-[11px] font-medium transition duration-150 active:scale-95">` +
+                    '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' +
+                    '<span>Excel</span>' +
+                '</button>' +
+                `<button type="button" onclick="exportTableToPDF('${tableId}')" title="Exportar a PDF" class="px-2 py-1 inline-flex items-center space-x-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 rounded-md text-[11px] font-medium transition duration-150 active:scale-95">` +
+                    '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>' +
+                    '<span>PDF</span>' +
+                '</button>' +
+            '</div>' +
+            /* Estructura original de la tabla */
+            `<table id="${tableId}" class="w-full text-left text-xs border-collapse" style="margin: 0 !important; border-spacing: 0;">` +
                 '<thead class="bg-indigo-50 dark:bg-gray-800 text-indigo-900 dark:text-indigo-200 font-semibold">' +
                     '<tr>' +
                         headers.map(h => `<th class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">${h.trim()}</th>`).join('') +
@@ -193,7 +209,6 @@ function formatMarkdown(text) {
 
         rows.forEach(row => {
             if (row.length > 0) {
-                // Sin clases de hover en las filas (<tr>)
                 tableHtml += '<tr>';
                 row.forEach(cell => {
                     tableHtml += `<td class="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">${cell.trim()}</td>`;
@@ -231,6 +246,51 @@ function formatMarkdown(text) {
     html = html.replace(/(<\/div>)\s*(<br\s*\/?>)+/g, '$1');
 
     return html.trim();
+}
+
+// -------------------------------------------------------------
+// FUNCIONES DE EXPORTACIÓN (EXCEL Y PDF)
+// -------------------------------------------------------------
+
+function exportTableToExcel(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    if (typeof XLSX === 'undefined') {
+        alert('Cargando librería de Excel, intenta de nuevo en unos segundos...');
+        return;
+    }
+
+    const workbook = XLSX.utils.table_to_book(table, { sheet: "Resumen" });
+    XLSX.writeFile(workbook, `reporte_facturas_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function exportTableToPDF(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('Cargando librería de PDF, intenta de nuevo en unos segundos...');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'pt', 'a4');
+
+    doc.setFontSize(14);
+    doc.setTextColor(40);
+    doc.text("Resumen de Datos - Asistente de Bodega", 40, 40);
+
+    doc.autoTable({
+        html: `#${tableId}`,
+        startY: 60,
+        styles: { fontSize: 9, cellPadding: 6 },
+        headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [249, 250, 251] },
+        margin: { top: 60, left: 40, right: 40 },
+    });
+
+    doc.save(`reporte_facturas_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
 function saveChatHistory() {
@@ -344,3 +404,5 @@ window.toggleAiChat = toggleAiChat;
 window.submitAiChat = submitAiChat;
 window.clearAiChat = clearAiChat;
 window.sendQuickPrompt = sendQuickPrompt;
+window.exportTableToExcel = exportTableToExcel;
+window.exportTableToPDF = exportTableToPDF;

@@ -9,7 +9,7 @@
        class="fixed top-0 right-0 h-full bg-white dark:bg-gray-900 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col border-l border-gray-200 dark:border-gray-800"
        style="width: 420px; min-width: 320px; max-width: 90vw;">
 
-    <!-- BARRA PARA REGLAR EL ANCHO (RESIZE HANDLE) -->
+    <!-- BARRA PARA REGULAR EL ANCHO (RESIZE HANDLE) -->
     <div id="ai-chat-resize-handle" 
          class="absolute top-0 left-0 w-2 h-full cursor-ew-resize hover:bg-indigo-500/50 transition-colors group z-10 flex items-center justify-center">
         <div class="w-1 h-8 bg-gray-300 dark:bg-gray-600 rounded-full group-hover:bg-indigo-500"></div>
@@ -89,3 +89,13 @@
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
     <span class="font-medium text-sm hidden sm:inline">Asistente IA</span>
 </button>
+
+<!-- ========================================================= -->
+<!-- LIBRERÍAS DE EXPORTACIÓN (Añadidas aquí)                  -->
+<!-- ========================================================= -->
+<!-- 1. Exportar a Excel (SheetJS) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- 2. Exportar a PDF (jsPDF + AutoTable) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
