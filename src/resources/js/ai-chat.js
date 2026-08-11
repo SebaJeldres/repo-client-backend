@@ -172,7 +172,7 @@ function formatMarkdown(text) {
 
     let html = escapeHtml(text.trim());
 
-    // 1. Convertir Tablas Markdown (Misma expresión regular original)
+    // 1. Convertir Tablas Markdown
     const tableRegex = /\|(.+)\|\r?\n\|[ -|:-]+\|\r?\n((\|.+\|\r?\n?)+)/g;
 
     html = html.replace(tableRegex, (match) => {
@@ -186,31 +186,26 @@ function formatMarkdown(text) {
         const headers = lines[0].split('|').filter(cell => cell.trim() !== '');
         const rows = lines.slice(2).map(line => line.split('|').filter(cell => cell.trim() !== ''));
 
-        let tableHtml = `
-            <div class="my-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
-                <!-- Barra superior con botones de exportar -->
-                <div class="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center text-xs select-none">
-                    <span class="text-gray-400 font-medium text-[11px] uppercase tracking-wider">Tabla de Datos</span>
-                    <div class="flex items-center space-x-1.5">
-                        <button type="button" onclick="exportTableToExcel('${tableId}')" title="Exportar a Excel" class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-medium transition flex items-center space-x-1 shadow-sm">
-                            <span>📊 Excel</span>
-                        </button>
-                        <button type="button" onclick="exportTableToPDF('${tableId}')" title="Exportar a PDF" class="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-medium transition flex items-center space-x-1 shadow-sm">
-                            <span>📄 PDF</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Contenedor con scroll para la Tabla -->
-                <div class="overflow-x-auto">
-                    <table id="${tableId}" class="w-full text-left text-xs border-collapse" style="margin: 0 !important; border-spacing: 0;">
-                        <thead class="bg-indigo-50 dark:bg-gray-800 text-indigo-900 dark:text-indigo-200 font-semibold">
-                            <tr>
-                                ${headers.map(h => `<th class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">${h.trim()}</th>`).join('')}
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
-        `;
+        let tableHtml = '<div class="overflow-x-auto my-2 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">' +
+            /* Contenedor superior solo con los nuevos botones */
+            '<div class="p-2 border-b border-gray-200 dark:border-gray-700 flex justify-end items-center space-x-1.5 select-none bg-gray-50/50 dark:bg-gray-800/50">' +
+                `<button type="button" onclick="exportTableToExcel('${tableId}')" title="Exportar a Excel" class="px-2 py-1 inline-flex items-center space-x-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-md text-[11px] font-medium transition duration-150 active:scale-95">` +
+                    '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' +
+                    '<span>Excel</span>' +
+                '</button>' +
+                `<button type="button" onclick="exportTableToPDF('${tableId}')" title="Exportar a PDF" class="px-2 py-1 inline-flex items-center space-x-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 rounded-md text-[11px] font-medium transition duration-150 active:scale-95">` +
+                    '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>' +
+                    '<span>PDF</span>' +
+                '</button>' +
+            '</div>' +
+            /* Estructura original de la tabla */
+            `<table id="${tableId}" class="w-full text-left text-xs border-collapse" style="margin: 0 !important; border-spacing: 0;">` +
+                '<thead class="bg-indigo-50 dark:bg-gray-800 text-indigo-900 dark:text-indigo-200 font-semibold">' +
+                    '<tr>' +
+                        headers.map(h => `<th class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">${h.trim()}</th>`).join('') +
+                    '</tr>' +
+                '</thead>' +
+                '<tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">';
 
         rows.forEach(row => {
             if (row.length > 0) {
@@ -222,12 +217,7 @@ function formatMarkdown(text) {
             }
         });
 
-        tableHtml += `
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
+        tableHtml += '</tbody></table></div>';
 
         return `___TABLE_START___${tableHtml}___TABLE_END___`;
     });
@@ -252,7 +242,7 @@ function formatMarkdown(text) {
     }).join('');
 
     // 4. Limpieza de <br> innecesarios alrededor del contenedor
-    html = html.replace(/(<br\s*\/?>\s*)+(<div class="my-3)/g, '$2');
+    html = html.replace(/(<br\s*\/?>\s*)+(<div class="overflow-x-auto)/g, '$2');
     html = html.replace(/(<\/div>)\s*(<br\s*\/?>)+/g, '$1');
 
     return html.trim();
