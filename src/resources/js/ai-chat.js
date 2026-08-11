@@ -9,6 +9,8 @@ const STORAGE_KEY = 'ai_chat_history';
 const STATE_KEY = 'ai_chat_is_open';
 const WIDTH_KEY = 'ai_chat_width';
 
+let tableCounter = 0; // Contador global para dar un ID único a cada tabla renderizada
+
 function getDomElements() {
     drawer = document.getElementById('ai-chat-drawer');
     backdrop = document.getElementById('ai-chat-backdrop');
@@ -133,7 +135,6 @@ function appendMessage(sender, text, sources = []) {
             `;
         }
 
-        // Removida la clase "leading-relaxed" global que deformaba la tabla
         messageDiv.innerHTML = `
             <div class="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold text-xs flex-shrink-0">
                 AI
@@ -171,7 +172,7 @@ function formatMarkdown(text) {
 
     let html = escapeHtml(text.trim());
 
-    // 1. Convertir Tablas Markdown
+    // 1. Convertir Tablas Markdown (Misma expresión regular original)
     const tableRegex = /\|(.+)\|\r?\n\|[ -|:-]+\|\r?\n((\|.+\|\r?\n?)+)/g;
 
     html = html.replace(tableRegex, (match) => {
@@ -179,21 +180,40 @@ function formatMarkdown(text) {
 
         if (lines.length < 2) return match;
 
+        tableCounter++;
+        const tableId = `ai-table-${tableCounter}`;
+
         const headers = lines[0].split('|').filter(cell => cell.trim() !== '');
         const rows = lines.slice(2).map(line => line.split('|').filter(cell => cell.trim() !== ''));
 
-        let tableHtml = '<div class="overflow-x-auto my-2 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">' +
-            '<table class="w-full text-left text-xs border-collapse" style="margin: 0 !important; border-spacing: 0;">' +
-                '<thead class="bg-indigo-50 dark:bg-gray-800 text-indigo-900 dark:text-indigo-200 font-semibold">' +
-                    '<tr>' +
-                        headers.map(h => `<th class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">${h.trim()}</th>`).join('') +
-                    '</tr>' +
-                '</thead>' +
-                '<tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">';
+        let tableHtml = `
+            <div class="my-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
+                <!-- Barra superior con botones de exportar -->
+                <div class="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center text-xs select-none">
+                    <span class="text-gray-400 font-medium text-[11px] uppercase tracking-wider">Tabla de Datos</span>
+                    <div class="flex items-center space-x-1.5">
+                        <button type="button" onclick="exportTableToExcel('${tableId}')" title="Exportar a Excel" class="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-medium transition flex items-center space-x-1 shadow-sm">
+                            <span>📊 Excel</span>
+                        </button>
+                        <button type="button" onclick="exportTableToPDF('${tableId}')" title="Exportar a PDF" class="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-medium transition flex items-center space-x-1 shadow-sm">
+                            <span>📄 PDF</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Contenedor con scroll para la Tabla -->
+                <div class="overflow-x-auto">
+                    <table id="${tableId}" class="w-full text-left text-xs border-collapse" style="margin: 0 !important; border-spacing: 0;">
+                        <thead class="bg-indigo-50 dark:bg-gray-800 text-indigo-900 dark:text-indigo-200 font-semibold">
+                            <tr>
+                                ${headers.map(h => `<th class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">${h.trim()}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+        `;
 
         rows.forEach(row => {
             if (row.length > 0) {
-                // Sin clases de hover en las filas (<tr>)
                 tableHtml += '<tr>';
                 row.forEach(cell => {
                     tableHtml += `<td class="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">${cell.trim()}</td>`;
@@ -202,7 +222,12 @@ function formatMarkdown(text) {
             }
         });
 
-        tableHtml += '</tbody></table></div>';
+        tableHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
 
         return `___TABLE_START___${tableHtml}___TABLE_END___`;
     });
@@ -227,10 +252,55 @@ function formatMarkdown(text) {
     }).join('');
 
     // 4. Limpieza de <br> innecesarios alrededor del contenedor
-    html = html.replace(/(<br\s*\/?>\s*)+(<div class="overflow-x-auto)/g, '$2');
+    html = html.replace(/(<br\s*\/?>\s*)+(<div class="my-3)/g, '$2');
     html = html.replace(/(<\/div>)\s*(<br\s*\/?>)+/g, '$1');
 
     return html.trim();
+}
+
+// -------------------------------------------------------------
+// FUNCIONES DE EXPORTACIÓN (EXCEL Y PDF)
+// -------------------------------------------------------------
+
+function exportTableToExcel(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    if (typeof XLSX === 'undefined') {
+        alert('Cargando librería de Excel, intenta de nuevo en unos segundos...');
+        return;
+    }
+
+    const workbook = XLSX.utils.table_to_book(table, { sheet: "Resumen" });
+    XLSX.writeFile(workbook, `reporte_facturas_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function exportTableToPDF(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert('Cargando librería de PDF, intenta de nuevo en unos segundos...');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'pt', 'a4');
+
+    doc.setFontSize(14);
+    doc.setTextColor(40);
+    doc.text("Resumen de Datos - Asistente de Bodega", 40, 40);
+
+    doc.autoTable({
+        html: `#${tableId}`,
+        startY: 60,
+        styles: { fontSize: 9, cellPadding: 6 },
+        headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [249, 250, 251] },
+        margin: { top: 60, left: 40, right: 40 },
+    });
+
+    doc.save(`reporte_facturas_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
 function saveChatHistory() {
@@ -344,3 +414,5 @@ window.toggleAiChat = toggleAiChat;
 window.submitAiChat = submitAiChat;
 window.clearAiChat = clearAiChat;
 window.sendQuickPrompt = sendQuickPrompt;
+window.exportTableToExcel = exportTableToExcel;
+window.exportTableToPDF = exportTableToPDF;
